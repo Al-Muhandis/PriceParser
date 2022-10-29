@@ -1,16 +1,17 @@
 object FrmMain: TFrmMain
   Left = 484
-  Height = 521
+  Height = 831
   Top = 154
   Width = 1125
   Caption = 'FrmMain'
-  ClientHeight = 521
+  ClientHeight = 831
   ClientWidth = 1125
   DesignTimePPI = 120
+  OnCreate = FormCreate
   LCLVersion = '2.2.4.0'
   object StrngGrd: TStringGrid
     Left = 0
-    Height = 488
+    Height = 798
     Top = 33
     Width = 1125
     Align = alClient
@@ -45,6 +46,7 @@ object FrmMain: TFrmMain
       end>
     FixedCols = 0
     Flat = True
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goSmoothScroll]
     RowCount = 1
     TabOrder = 0
     TitleStyle = tsNative

@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, EditBtn, StdCtrls, ExtCtrls, Grids, ComCtrls, SynEdit,
-  Laz2_DOM
+  Laz2_DOM, eventlog
   ;
 
 type
@@ -19,8 +19,14 @@ type
     StrngGrd: TStringGrid;
     TlBr: TToolBar;
     procedure BtnClick({%H-}Sender: TObject);
+    procedure FormCreate({%H-}Sender: TObject);
   private
+    FEventLog: TEventLog;
+    FFormatSettings: TFormatSettings;
     function ParseFromOneTable(var aTableNode: TDOMNode; var aRow: Integer): Boolean;
+    function ParseCurrency(const aValue: String): Currency;
+    function ParseInteger(const aValue: String): Integer;
+    function ParseText(const aValue: String): String;
   public
 
   end;
@@ -31,7 +37,7 @@ var
 implementation
 
 uses
-  laz2_XMLRead, laz2_xmlutils, StrUtils, eventlog
+  laz2_XMLRead, laz2_xmlutils, StrUtils
   ;
 
 {$R *.lfm}
@@ -42,12 +48,9 @@ procedure TFrmMain.BtnClick(Sender: TObject);
 var
   aDoc: TXMLDocument;
   aContentNode, aNode: TDOMNode;
-  aLogger: TEventLog;
   aRow: Integer;
 begin
-  aLogger:=TEventLog.Create(nil);
-  aLogger.LogType:=ltFile;
-  aLogger.Info('Log started');
+  FEventLog.Info('Log started');
   ReadXMLFile(aDoc, FlNmEdt.FileName);
   try  
     aRow:=0;
@@ -55,19 +58,28 @@ begin
     aNode:=aContentNode.FindNode('table:table');
     if not Assigned(aNode) or not aNode.HasChildNodes then
       Exit;
-    ParseFromOneTable(aNode, aRow);
-    ParseFromOneTable(aNode, aRow);  
-    ParseFromOneTable(aNode, aRow);
+    repeat
+    until not ParseFromOneTable(aNode, aRow);
   finally
-    aLogger.Info('Log finished');
+    FEventLog.Info('Log finished');
     aDoc.Free;
-    aLogger.Free;
   end;
+end;
+
+procedure TFrmMain.FormCreate(Sender: TObject);
+begin
+  FFormatSettings:=DefaultFormatSettings;
+  FFormatSettings.DecimalSeparator:=','; 
+  FFormatSettings.ThousandSeparator:='.';
+  FEventLog:=TEventLog.Create(Self);
+  FEventLog.LogType:=ltFile;
 end;
 
 function TFrmMain.ParseFromOneTable(var aTableNode: TDOMNode; var aRow: Integer): Boolean;
 var
-  aArticle, aName, aPV, aBV,aPPrice, aCPrice: String;
+  aArticle, aName: String;
+  aPV: Integer;
+  aBV, aPPrice, aCPrice: Currency;
   aNodeCell, aNodeRow: TDOMNode;
 begin
   Result:=False;
@@ -84,23 +96,50 @@ begin
     aNodeCell:=aNodeRow.FirstChild;
     aArticle:=Trim(aNodeCell.TextContent);
     aNodeCell:=aNodeCell.NextSibling;
-    aName:=Trim(DelSpace1(aNodeCell.TextContent));
+    aName:=ParseText(aNodeCell.TextContent);
     aNodeCell:=aNodeCell.NextSibling;
-    aPV:=Trim(aNodeCell.TextContent);
+    aPV:=ParseInteger(aNodeCell.TextContent);
     aNodeCell:=aNodeCell.NextSibling;
-    aBV:=Trim(aNodeCell.TextContent);
-    aNodeCell:=aNodeCell.NextSibling;
-    aNodeCell:=aNodeCell.NextSibling;
-    aPPrice:=Trim(aNodeCell.TextContent);
+    aBV:=ParseCurrency(aNodeCell.TextContent);
     aNodeCell:=aNodeCell.NextSibling;
     aNodeCell:=aNodeCell.NextSibling;
-    aCPrice:=Trim(aNodeCell.TextContent);
+    aPPrice:=ParseCurrency(aNodeCell.TextContent);
+    aNodeCell:=aNodeCell.NextSibling;
+    aNodeCell:=aNodeCell.NextSibling;
+    aCPrice:=ParseCurrency(aNodeCell.TextContent);
 
     Inc(aRow);
-    StrngGrd.InsertRowWithValues(aRow, [aArticle, aName, aPV, aBV, aPPrice, aCPrice]);
+    StrngGrd.InsertRowWithValues(aRow, [aArticle, aName, aPV.ToString, CurrToStr(aBV),
+      CurrToStr(aPPrice), CurrToStr(aCPrice)]);
+    FEventLog.Info('Article: %s; Name: %s; PV: %d; BV: %s; PPrice: %s; CPrice: %s',
+      [aArticle, aName, aPV, CurrToStr(aBV), CurrToStr(aPPrice), CurrToStr(aCPrice)]);
     aNodeRow:=aNodeRow.NextSibling;
   end;
   Result:=True;
+end;
+
+function TFrmMain.ParseCurrency(const aValue: String): Currency;
+var
+  S: String;
+begin
+  S:=ParseText(aValue);
+  S:=ReplaceStr(S, '.', EmptyStr);  
+  S:=ReplaceStr(S, ' ', EmptyStr);
+  Result:=StrToCurr(S, FFormatSettings);
+end;
+
+function TFrmMain.ParseInteger(const aValue: String): Integer;
+begin
+  Result:=StrToInt(Trim(AValue));
+end;
+
+function TFrmMain.ParseText(const aValue: String): String;
+var
+  S: String;
+begin
+  S:=AdjustLineBreaks(aValue); 
+  S:=ReplaceStr(Trim(S), LineEnding, EmptyStr);
+  Result:=Trim(DelSpace1(S));
 end;
 
 end.
