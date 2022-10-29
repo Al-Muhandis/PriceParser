@@ -23,7 +23,8 @@ type
   private
     FEventLog: TEventLog;
     FFormatSettings: TFormatSettings;
-    function ParseFromOneTable(var aTableNode: TDOMNode; var aRow: Integer): Boolean;
+    FRow: Integer;
+    function ParseFromOneTable(var aTableNode: TDOMNode): Boolean;
     function ParseCurrency(const aValue: String): Currency;
     function ParseInteger(const aValue: String): Integer;
     function ParseText(const aValue: String): String;
@@ -48,18 +49,17 @@ procedure TFrmMain.BtnClick(Sender: TObject);
 var
   aDoc: TXMLDocument;
   aContentNode, aNode: TDOMNode;
-  aRow: Integer;
 begin
   FEventLog.Info('Log started');
   ReadXMLFile(aDoc, FlNmEdt.FileName);
   try  
-    aRow:=0;
+    FRow:=0;
     aContentNode:=aDoc.FindNode('office:document').FindNode('office:body').FindNode('office:text');
     aNode:=aContentNode.FindNode('table:table');
     if not Assigned(aNode) or not aNode.HasChildNodes then
       Exit;
-    repeat
-    until not ParseFromOneTable(aNode, aRow);
+    while ParseFromOneTable(aNode) do
+      aNode:=aNode.NextSibling;
   finally
     FEventLog.Info('Log finished');
     aDoc.Free;
@@ -75,18 +75,34 @@ begin
   FEventLog.LogType:=ltFile;
 end;
 
-function TFrmMain.ParseFromOneTable(var aTableNode: TDOMNode; var aRow: Integer): Boolean;
+function TFrmMain.ParseFromOneTable(var aTableNode: TDOMNode): Boolean;
 var
   aArticle, aName: String;
   aPV: Integer;
   aBV, aPPrice, aCPrice: Currency;
-  aNodeCell, aNodeRow: TDOMNode;
+  aNodeCell, aNodeRow, aChildTable: TDOMNode;
 begin
   Result:=False;
-  aTableNode:=aTableNode.NextSibling;// first table is the header of a visual table
+  if not Assigned(aTableNode) then
+    Exit;
+  if FRow=35 then
+    FEventLog.Debug('! '+aTableNode.NodeName+' '+aTableNode.Attributes.GetNamedItem('text:style-name').NodeName+'='+
+      aTableNode.Attributes.GetNamedItem('text:style-name').NodeValue);
   while not SameStr(aTableNode.NodeName, 'table:table') do
+  begin         // Check if the table can be found at lower level
+    if SameStr(aTableNode.NodeName, 'text:section') then
+    begin
+      aChildTable:=aTableNode.FirstChild;
+      while ParseFromOneTable(aChildTable) do
+        aChildTable:=aChildTable.NextSibling;
+    end;
     aTableNode:=aTableNode.NextSibling;
-  if not aTableNode.HasChildNodes then
+    if not Assigned(aTableNode) then
+      break;
+    if (FRow=35) then
+      FEventLog.Debug('! '+aTableNode.NodeName);
+  end;
+  if not Assigned(aTableNode) or not aTableNode.HasChildNodes then
     Exit;
   aNodeRow:=aTableNode.FirstChild;
   while Assigned(aNodeRow) do
@@ -95,6 +111,8 @@ begin
       aNodeRow:=aNodeRow.NextSibling;
     aNodeCell:=aNodeRow.FirstChild;
     aArticle:=Trim(aNodeCell.TextContent);
+    if aArticle.IsEmpty then
+      Exit(True);
     aNodeCell:=aNodeCell.NextSibling;
     aName:=ParseText(aNodeCell.TextContent);
     aNodeCell:=aNodeCell.NextSibling;
@@ -108,11 +126,11 @@ begin
     aNodeCell:=aNodeCell.NextSibling;
     aCPrice:=ParseCurrency(aNodeCell.TextContent);
 
-    Inc(aRow);
-    StrngGrd.InsertRowWithValues(aRow, [aArticle, aName, aPV.ToString, CurrToStr(aBV),
+    Inc(FRow);
+    StrngGrd.InsertRowWithValues(FRow, [FRow.ToString, aArticle, aName, aPV.ToString, CurrToStr(aBV),
       CurrToStr(aPPrice), CurrToStr(aCPrice)]);
-    FEventLog.Info('Article: %s; Name: %s; PV: %d; BV: %s; PPrice: %s; CPrice: %s',
-      [aArticle, aName, aPV, CurrToStr(aBV), CurrToStr(aPPrice), CurrToStr(aCPrice)]);
+    FEventLog.Info('Row: %d. Article: %s; Name: %s; PV: %d; BV: %s; PPrice: %s; CPrice: %s',
+      [FRow, aArticle, aName, aPV, CurrToStr(aBV), CurrToStr(aPPrice), CurrToStr(aCPrice)]);
     aNodeRow:=aNodeRow.NextSibling;
   end;
   Result:=True;
@@ -125,12 +143,19 @@ begin
   S:=ParseText(aValue);
   S:=ReplaceStr(S, '.', EmptyStr);  
   S:=ReplaceStr(S, ' ', EmptyStr);
+  if SameStr(S, '–') then
+    Exit(0);
   Result:=StrToCurr(S, FFormatSettings);
 end;
 
 function TFrmMain.ParseInteger(const aValue: String): Integer;
+var
+  S: String;
 begin
-  Result:=StrToInt(Trim(AValue));
+  S:=Trim(AValue);
+  if SameStr(S, '–') then
+    Exit(0);
+  Result:=StrToInt(S);
 end;
 
 function TFrmMain.ParseText(const aValue: String): String;
@@ -140,6 +165,8 @@ begin
   S:=AdjustLineBreaks(aValue); 
   S:=ReplaceStr(Trim(S), LineEnding, EmptyStr);
   Result:=Trim(DelSpace1(S));
+  if Result.IsEmpty then
+    raise Exception.Create(Format('Value is empty! Row %d', [FRow+1]));
 end;
 
 end.
