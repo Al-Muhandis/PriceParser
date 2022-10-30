@@ -90,8 +90,6 @@ var
   aParsed: Boolean;
 begin
   Result:=False;
-  if FRow=74 then
-    FEventLog.Debug('!');
   if not Assigned(aTableNode) then
     Exit;
   while not SameStr(aTableNode.NodeName, 'table:table') do
@@ -143,8 +141,6 @@ begin
         Inc(FRow);
         StrngGrd.InsertRowWithValues(FRow, [FRow.ToString, aArticle, aName, aPV.ToString, CurrToStr(aBV),
           CurrToStr(aPPrice), CurrToStr(aCPrice)]);
-        FEventLog.Info('Row: %d. Article: %s; Name: %s; PV: %d; BV: %s; PPrice: %s; CPrice: %s',
-          [FRow, aArticle, aName, aPV, CurrToStr(aBV), CurrToStr(aPPrice), CurrToStr(aCPrice)]);
       end;
     end;
     aNodeRow:=aNodeRow.NextSibling;
