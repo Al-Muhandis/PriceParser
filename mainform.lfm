@@ -3,7 +3,7 @@ object FrmMain: TFrmMain
   Height = 831
   Top = 154
   Width = 1125
-  Caption = 'FrmMain'
+  Caption = 'XML price parser'
   ClientHeight = 831
   ClientWidth = 1125
   DesignTimePPI = 120
