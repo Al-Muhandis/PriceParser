@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, EditBtn, StdCtrls, ExtCtrls, Grids, ComCtrls, SynEdit,
-  Laz2_DOM, eventlog
+  Laz2_DOM, eventlog, fpjson
   ;
 
 type
@@ -21,9 +21,13 @@ type
     procedure BtnClick({%H-}Sender: TObject);
     procedure FormCreate({%H-}Sender: TObject);
   private
+    FArticles: TStringList;
     FEventLog: TEventLog;
     FFormatSettings: TFormatSettings;
     FRow: Integer;
+    FOutJSON: TJSONArray;
+    procedure AppendPriceItem(aJSONArray: TJSONArray; const aArticle, aName: String; aPV: Integer; aPPrice, aCPrice,
+      aBV: Currency);
     procedure ParsePrice(const aPriceFileName: String);
     function ParseFromOneTable(var aTableNode: TDOMNode): Boolean;
     function ParseCurrency(const aValue: String; out aParsed: Boolean): Currency;
@@ -35,6 +39,14 @@ type
 
 var
   FrmMain: TFrmMain;
+
+const
+  dt_article='article';
+  dt_name='name';
+  dt_pv='pv';
+  dt_bv='bv';
+  dt_cprice='cprice';
+  dt_pprice='pprice';
 
 implementation
 
@@ -60,13 +72,43 @@ begin
   FEventLog.LogType:=ltFile;
 end;
 
+procedure TFrmMain.AppendPriceItem(aJSONArray: TJSONArray; const aArticle, aName: String; aPV: Integer;
+  aPPrice, aCPrice, aBV: Currency);
+var
+  aJSONItem: TJSONObject;
+begin
+  if FArticles.IndexOf(aArticle)>-1 then
+  begin
+    FEventLog.Warning(Format('Duplicate! [%s] %s', [aArticle, aName]));
+    Exit;
+  end;
+  Inc(FRow);
+  StrngGrd.InsertRowWithValues(FRow, [FRow.ToString, aArticle, aName, aPV.ToString, CurrToStr(aBV),
+            CurrToStr(aPPrice), CurrToStr(aCPrice)]);
+  aJSONItem:=TJSONObject.Create;
+  aJSONItem.Add(dt_article, aArticle); 
+  aJSONItem.Add(dt_name, aName);
+  aJSONItem.Add(dt_pv, aPV);
+  aJSONItem.Add(dt_pprice, aPPrice);
+  aJSONItem.Add(dt_cprice, aCPrice); 
+  aJSONItem.Add(dt_bv, aBV);
+  aJSONArray.Add(aJSONItem);
+  FArticles.Add(aArticle);
+end;
+
 procedure TFrmMain.ParsePrice(const aPriceFileName: String);
 var
   aDoc: TXMLDocument;
   aContentNode, aNode: TDOMNode;
+  aFile: TStringList;
 begin
   FEventLog.Info('Log started');
+  FOutJSON:=TJSONArray.Create;
   ReadXMLFile(aDoc, aPriceFileName);
+  FArticles:=TStringList.Create;
+  FArticles.CaseSensitive:=False;
+  FArticles.Sorted:=True;
+  FArticles.Duplicates:=dupError;
   try
     FRow:=0;
     aContentNode:=aDoc.FindNode('office:document').FindNode('office:body').FindNode('office:text');
@@ -75,8 +117,14 @@ begin
       Exit;
     while ParseFromOneTable(aNode) do
       aNode:=aNode.NextSibling;
+    aFile:=TStringList.Create;
+    aFile.Text:=FOutJSON.FormatJSON();
+    aFile.SaveToFile('pricelist.json');
   finally
+    aFile.Free;
+    FArticles.Free;
     FEventLog.Info('Log finished');
+    FOutJSON.Free;
     aDoc.Free;
   end;
 end;
@@ -137,10 +185,7 @@ begin
         aCPrice:=ParseCurrency(aNodeCell.TextContent, aParsed);
         if not aParsed then
           raise Exception.Create('Parse error');
-
-        Inc(FRow);
-        StrngGrd.InsertRowWithValues(FRow, [FRow.ToString, aArticle, aName, aPV.ToString, CurrToStr(aBV),
-          CurrToStr(aPPrice), CurrToStr(aCPrice)]);
+        AppendPriceItem(FOutJSON, aArticle, aName, aPV, aPPrice, aCPrice, aBV);
       end;
     end;
     aNodeRow:=aNodeRow.NextSibling;
