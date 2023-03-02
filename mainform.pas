@@ -99,7 +99,7 @@ end;
 procedure TFrmMain.ParsePrice(const aPriceFileName: String);
 var
   aDoc: TXMLDocument;
-  aContentNode, aNode: TDOMNode;
+  aContentNode, aNode, aNodeTmp: TDOMNode;
   aFile: TStringList;
 begin
   FEventLog.Info('Log started');
@@ -111,7 +111,9 @@ begin
   FArticles.Duplicates:=dupError;
   try
     FRow:=0;
-    aContentNode:=aDoc.FindNode('office:document').FindNode('office:body').FindNode('office:text');
+    // aNodeTmp:=aDoc.FirstChild('office:document');
+    aNodeTmp:=aDoc.FirstChild;
+    aContentNode:=aNodeTmp.FindNode('office:body').FindNode('office:text');
     aNode:=aContentNode.FindNode('table:table');
     if not Assigned(aNode) or not aNode.HasChildNodes then
       Exit;
