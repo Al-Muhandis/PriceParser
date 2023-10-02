@@ -8,7 +8,7 @@ object FrmMain: TFrmMain
   ClientWidth = 1125
   DesignTimePPI = 120
   OnCreate = FormCreate
-  LCLVersion = '2.2.4.0'
+  LCLVersion = '2.2.6.0'
   object StrngGrd: TStringGrid
     Left = 0
     Height = 798

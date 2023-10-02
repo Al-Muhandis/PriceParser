@@ -138,6 +138,17 @@ var
   aBV, aPPrice, aCPrice: Currency;
   aNodeCell, aNodeRow, aChildTable: TDOMNode;
   aParsed: Boolean;
+
+  function CheckNodeCell(aNode: TDOMNode): TDOMNode;
+  begin
+    Result:=aNode;
+    while Result.NodeName='table:covered-table-cell' do
+    begin
+      FEventLog.Debug('Jump to next cell in the row. "%s"', [aName]);
+      Result:=Result.NextSibling;
+    end;
+  end;
+
 begin
   Result:=False;
   if not Assigned(aTableNode) then
@@ -183,11 +194,19 @@ begin
         if not aParsed then
           raise Exception.Create('Parse error');
         aNodeCell:=aNodeCell.NextSibling;
-        aNodeCell:=aNodeCell.NextSibling;
-        aCPrice:=ParseCurrency(aNodeCell.TextContent, aParsed);
-        if not aParsed then
-          raise Exception.Create('Parse error');
-        AppendPriceItem(FOutJSON, aArticle, aName, aPV, aPPrice, aCPrice, aBV);
+        if Assigned(aNodeCell) then
+        begin
+          aNodeCell:=CheckNodeCell(aNodeCell);
+          aNodeCell:=aNodeCell.NextSibling;
+          aNodeCell:=CheckNodeCell(aNodeCell);
+          aCPrice:=ParseCurrency(aNodeCell.TextContent, aParsed);
+          if not aParsed then
+            raise Exception.Create('Parse error');
+          AppendPriceItem(FOutJSON, aArticle, aName, aPV, aPPrice, aCPrice, aBV);
+        end
+        else
+          FEventLog.Error('Parse Error: %s %s; PV: %d, Partner.: %s, BD: %s',
+            [aArticle, aName, aPV, CurrToStr(aPPrice), CurrToStr(aBV)]);
       end;
     end;
     aNodeRow:=aNodeRow.NextSibling;
