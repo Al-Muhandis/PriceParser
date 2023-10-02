@@ -5,6 +5,8 @@
 ~*
 *.zip
 *.dat
+*.odt
+*.pdf
 
 # Lazarus compiler-generated binaries (safe to delete)
 *.exe
