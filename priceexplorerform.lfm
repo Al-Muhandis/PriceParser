@@ -1,0 +1,73 @@
+object Form1: TForm1
+  Left = 347
+  Height = 721
+  Top = 173
+  Width = 1213
+  Caption = 'Form1'
+  ClientHeight = 721
+  ClientWidth = 1213
+  DesignTimePPI = 120
+  LCLVersion = '3.2.0.0'
+  object PrSpltr: TPairSplitter
+    Left = 0
+    Height = 721
+    Top = 0
+    Width = 1213
+    Align = alClient
+    Position = 600
+    object PairSplitterSide1: TPairSplitterSide
+      Cursor = crArrow
+      Left = 0
+      Height = 721
+      Top = 0
+      Width = 600
+      ClientWidth = 600
+      ClientHeight = 721
+      inline FrmPrcLeft: TFramePrice
+        Height = 721
+        Width = 600
+        Align = alClient
+        ClientHeight = 721
+        ClientWidth = 600
+        inherited LstVw: TListView
+          Height = 660
+          Width = 600
+        end
+        inherited CntrlBr: TControlBar
+          Width = 600
+        end
+        inherited SttsBr: TStatusBar
+          Top = 692
+          Width = 600
+        end
+      end
+    end
+    object PairSplitterSide2: TPairSplitterSide
+      Cursor = crArrow
+      Left = 605
+      Height = 721
+      Top = 0
+      Width = 608
+      ClientWidth = 608
+      ClientHeight = 721
+      inline FramePrice1: TFramePrice
+        Height = 721
+        Width = 608
+        Align = alClient
+        ClientHeight = 721
+        ClientWidth = 608
+        inherited LstVw: TListView
+          Height = 660
+          Width = 608
+        end
+        inherited CntrlBr: TControlBar
+          Width = 608
+        end
+        inherited SttsBr: TStatusBar
+          Top = 692
+          Width = 608
+        end
+      end
+    end
+  end
+end

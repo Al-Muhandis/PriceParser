@@ -201,7 +201,7 @@ begin
           aNodeCell:=CheckNodeCell(aNodeCell);
           aCPrice:=ParseCurrency(aNodeCell.TextContent, aParsed);
           if not aParsed then
-            raise Exception.Create('Parse error');
+            raise Exception.CreateFmt('Parse error. ACPrice: %s', [aNodeCell.TextContent]);
           AppendPriceItem(FOutJSON, aArticle, aName, aPV, aPPrice, aCPrice, aBV);
         end
         else
@@ -225,7 +225,7 @@ begin
     Exit;
   S:=ReplaceStr(S, '.', EmptyStr);  
   S:=ReplaceStr(S, ' ', EmptyStr);
-  if SameStr(S, '–') then
+  if IndexStr(S, ['–', '—'])>-1 then
     Exit;
   aParsed:=TryStrToCurr(S, Result, FFormatSettings);
 end;

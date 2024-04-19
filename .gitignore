@@ -42,3 +42,6 @@ lib/
 
 # Application bundle for Mac OS
 *.app/
+/Прайс-лист 2024
+/Прайс-лист-2024
+*.odt#

@@ -1,0 +1,66 @@
+object FramePrice: TFramePrice
+  Left = 0
+  Height = 504
+  Top = 0
+  Width = 699
+  ClientHeight = 504
+  ClientWidth = 699
+  DesignTimePPI = 120
+  ParentFont = False
+  TabOrder = 0
+  DesignLeft = 701
+  DesignTop = 193
+  object LstVw: TListView
+    Left = 0
+    Height = 443
+    Top = 32
+    Width = 699
+    Align = alClient
+    AutoSortIndicator = True
+    Columns = <    
+      item
+        Caption = 'Артикул'
+        Width = 100
+      end    
+      item
+        Caption = 'Наименование'
+        Width = 300
+      end    
+      item
+        Caption = 'Баллы (PV)'
+      end>
+    ReadOnly = True
+    RowSelect = True
+    SortType = stText
+    TabOrder = 0
+    ViewStyle = vsReport
+  end
+  object CntrlBr: TControlBar
+    Left = 0
+    Height = 32
+    Top = 0
+    Width = 699
+    Align = alTop
+    TabOrder = 1
+    object FlNmEdt: TFileNameEdit
+      Left = 13
+      Height = 28
+      Top = 1
+      Width = 483
+      FilterIndex = 0
+      HideDirectories = False
+      ButtonWidth = 29
+      NumGlyphs = 1
+      MaxLength = 0
+      TabOrder = 0
+      OnChange = FlNmEdtChange
+    end
+  end
+  object SttsBr: TStatusBar
+    Left = 0
+    Height = 29
+    Top = 475
+    Width = 699
+    Panels = <>
+  end
+end

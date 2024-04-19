@@ -8,7 +8,7 @@ object FrmMain: TFrmMain
   ClientWidth = 1125
   DesignTimePPI = 120
   OnCreate = FormCreate
-  LCLVersion = '2.2.6.0'
+  LCLVersion = '3.2.0.0'
   object StrngGrd: TStringGrid
     Left = 0
     Height = 798
@@ -97,8 +97,8 @@ object FrmMain: TFrmMain
       Top = 2
       Width = 120
       Caption = 'Run parser'
-      OnClick = BtnClick
       TabOrder = 1
+      OnClick = BtnClick
     end
   end
 end
