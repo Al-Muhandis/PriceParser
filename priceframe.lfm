@@ -2,9 +2,9 @@ object FramePrice: TFramePrice
   Left = 0
   Height = 504
   Top = 0
-  Width = 699
+  Width = 665
   ClientHeight = 504
-  ClientWidth = 699
+  ClientWidth = 665
   DesignTimePPI = 120
   ParentFont = False
   TabOrder = 0
@@ -14,7 +14,7 @@ object FramePrice: TFramePrice
     Left = 0
     Height = 443
     Top = 32
-    Width = 699
+    Width = 665
     Align = alClient
     AutoSortIndicator = True
     Columns = <    
@@ -28,6 +28,18 @@ object FramePrice: TFramePrice
       end    
       item
         Caption = 'Баллы (PV)'
+      end    
+      item
+        Caption = 'Закупочная цена'
+        Width = 75
+      end    
+      item
+        Caption = 'Каталожная цена'
+        Width = 75
+      end    
+      item
+        Caption = 'Бонусная основа'
+        Width = 75
       end>
     ReadOnly = True
     RowSelect = True
@@ -39,14 +51,14 @@ object FramePrice: TFramePrice
     Left = 0
     Height = 32
     Top = 0
-    Width = 699
+    Width = 665
     Align = alTop
     TabOrder = 1
     object FlNmEdt: TFileNameEdit
       Left = 13
       Height = 28
       Top = 1
-      Width = 483
+      Width = 515
       FilterIndex = 0
       HideDirectories = False
       ButtonWidth = 29
@@ -60,7 +72,7 @@ object FramePrice: TFramePrice
     Left = 0
     Height = 29
     Top = 475
-    Width = 699
+    Width = 665
     Panels = <>
   end
 end

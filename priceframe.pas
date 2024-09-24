@@ -49,7 +49,10 @@ begin
       begin
         Caption:=aObject.Strings['article'];
         SubItems.Add(aObject.Strings['name']);
-        SubItems.Add(aObject.Strings['pv']);
+        SubItems.Add(aObject.Integers['pv'].ToString);
+        SubItems.Add(aObject.Floats['pprice'].ToString);
+        SubItems.Add(aObject.Floats['cprice'].ToString);
+        SubItems.Add(aObject.Floats['bv'].ToString);
       end;
     end;
   finally

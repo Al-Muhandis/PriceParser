@@ -29,17 +29,6 @@ object Form1: TForm1
         Align = alClient
         ClientHeight = 721
         ClientWidth = 600
-        inherited LstVw: TListView
-          Height = 660
-          Width = 600
-        end
-        inherited CntrlBr: TControlBar
-          Width = 600
-        end
-        inherited SttsBr: TStatusBar
-          Top = 692
-          Width = 600
-        end
       end
     end
     object PairSplitterSide2: TPairSplitterSide
@@ -56,17 +45,6 @@ object Form1: TForm1
         Align = alClient
         ClientHeight = 721
         ClientWidth = 608
-        inherited LstVw: TListView
-          Height = 660
-          Width = 608
-        end
-        inherited CntrlBr: TControlBar
-          Width = 608
-        end
-        inherited SttsBr: TStatusBar
-          Top = 692
-          Width = 608
-        end
       end
     end
   end
