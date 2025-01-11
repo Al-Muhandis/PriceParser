@@ -111,7 +111,7 @@ Function Build-Project {
 
 Filter Out-Log {
     $(
-        If (Test-Path -Path Variable:LastExitCode) {
+        If (! (Test-Path -Path Variable:LastExitCode)) {
             "$([char]27)[33m$(Get-Date -uformat '%y-%m-%d_%T')`t{0}$([char]27)[0m" -f $_
         } ElseIf ($LastExitCode -eq 0) {
             "$([char]27)[32m$(Get-Date -uformat '%y-%m-%d_%T')`t{0}$([char]27)[0m" -f $_
