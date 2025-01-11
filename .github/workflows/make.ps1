@@ -19,17 +19,14 @@ Function Build-Project {
     New-Variable -Option Constant -Name VAR -Value (
         Get-Content -Path $PSCommandPath.Replace('ps1', 'json') | ConvertFrom-Json
     )
-    'CHECK PATH WITH .LPI' | Out-Log
     If (! (Test-Path -Path $Var.app)) {
         "$($Var.app) did not find!" | Out-Log
         Exit 1
     }
     If (Test-Path -Path '.gitmodules') {
-        'UPDATE GIT SUBMODULE' | Out-Log
         & git submodule update --init --recursive --force --remote | Out-Host
         "[$($LastExitCode)] git submodule update" | Out-Log
     }
-    'INSTALL LAZBUILD' | Out-Log
     @(
         @{
             Cmd = 'lazbuild'
@@ -42,9 +39,8 @@ Function Build-Project {
         $_.Url | Request-File | Install-Program
         $Env:PATH+=';' + $_.Path
         Return (Get-Command $_.Cmd).Source
-    } | Out-Host
+    } | Out-Log
     If ($VAR.Pkg.count -gt 0) {
-        'LOAD PACKAGES FROM OPM' | Out-Log
         $VAR.Pkg | ForEach-Object {
             @{
                 Name = $_
@@ -69,7 +65,6 @@ Function Build-Project {
         }
     }
     If (Test-Path -Path $VAR.lib) {
-        'LOAD OTHER .LPK' | Out-Log
         (Get-ChildItem -Filter '*.lpk' -Recurse -File –Path $VAR.lib).FullName |
             Where-Object {
                 $_ -notmatch '(cocoa|x11|_template)'
@@ -80,7 +75,6 @@ Function Build-Project {
     }
     Exit $(
         If (Test-Path -Path $Var.tst) {
-            'RUN UNITTEST' | Out-Log
             $Output = (
                 & lazbuild --build-all --recursive --no-write-project $VAR.tst |
                     Where-Object {
@@ -92,7 +86,7 @@ Function Build-Project {
             & $Output --all --format=plain --progress | Out-Log
             If ($LastExitCode -eq 0) { 0 } Else { 1 }
         }
-    ) + ('BUILD APPLICATIONS' | Out-Log) + (
+    ) + (
         (Get-ChildItem -Filter '*.lpi' -Recurse -File –Path $Var.app).FullName |
             ForEach-Object {
                 $Output = (& lazbuild --build-all --recursive --no-write-project $_)
