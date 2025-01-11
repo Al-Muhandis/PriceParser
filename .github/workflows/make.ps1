@@ -107,6 +107,7 @@ Function Build-Project {
                 $Result | Out-Log
                 Return $exitCode
             } | Measure-Object -Sum
+        )
     ).Sum
 }
 
