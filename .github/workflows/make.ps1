@@ -91,7 +91,7 @@ Function Build-Project {
             & $Output --all --format=plain --progress | Out-Log
             If ($LastExitCode -eq 0) { 0 } Else { 1 }
         }
-    ) + (
+    ) + ('BUILD APPLICATIONS' | Out-Log) + (
         (Get-ChildItem -Filter '*.lpi' -Recurse -File –Path $Var.app).FullName |
             ForEach-Object {
                 $Output = (& lazbuild --build-all --recursive --no-write-project $_)
@@ -111,7 +111,7 @@ Function Build-Project {
 
 Filter Out-Log {
     $(
-        If ($LastExitCode -eq $Null) {
+        If (Test-Path -Path Variable:LastExitCode) {
             "$([char]27)[33m$(Get-Date -uformat '%y-%m-%d_%T')`t{0}$([char]27)[0m" -f $_
         } ElseIf ($LastExitCode -eq 0) {
             "$([char]27)[32m$(Get-Date -uformat '%y-%m-%d_%T')`t{0}$([char]27)[0m" -f $_
