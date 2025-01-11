@@ -1,0 +1,7 @@
+{
+    "app" : "src",
+    "lib" : "use",
+    "tst" : "tst",
+    "pkg" : [
+    ]
+}
