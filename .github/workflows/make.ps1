@@ -8,7 +8,7 @@ download = 'https://microsoft.com/en-us/evalcenter'
 package  = 'https://learn.microsoft.com/en-us/mem/configmgr/develop/apps/how-to-create-the-windows-installer-file-msi'
 shell    = 'https://learn.microsoft.com/en-us/powershell'
 
-Usage: pwsh -File $PSCommandPath [OPTIONS]
+Usage: pwsh -File $($PSCommandPath) [OPTIONS]
 Options:
     build
     lint
@@ -16,19 +16,18 @@ Options:
 }
 
 Function Build-Project {
-    'LOAD MAKE.JSON' | Out-Log
     New-Variable -Option Constant -Name VAR -Value (
         Get-Content -Path $PSCommandPath.Replace('ps1', 'json') | ConvertFrom-Json
     )
     'CHECK PATH WITH .LPI' | Out-Log
     If (! (Test-Path -Path $Var.app)) {
-        "$Var.app did not find!" | Out-Log
+        "$($Var.app) did not find!" | Out-Log
         Exit 1
     }
-    'UPDATE GIT SUBMODULE' | Out-Log
     If (Test-Path -Path '.gitmodules') {
+        'UPDATE GIT SUBMODULE' | Out-Log
         & git submodule update --init --recursive --force --remote | Out-Host
-        "[$LastExitCode] git submodule update" | Out-Log
+        "[$($LastExitCode)] git submodule update" | Out-Log
     }
     'INSTALL LAZBUILD' | Out-Log
     @(
@@ -41,31 +40,33 @@ Function Build-Project {
         ! (Test-Path -Path $_.Path)
     } | ForEach-Object {
         $_.Url | Request-File | Install-Program
-        $Env:PATH+=";$($_.Path)"
+        $Env:PATH+=';' + $_.Path
         Return (Get-Command $_.Cmd).Source
     } | Out-Host
-    'LOAD PACKAGES FROM OPM' | Out-Log
-    $VAR.Pkg | ForEach-Object {
-        @{
-            Name = $_
-            Uri = "https://packages.lazarus-ide.org/$_.zip"
-            Path = "$Env:APPDATA\.lazarus\onlinepackagemanager\packages\$_"
-            OutFile = (New-TemporaryFile).FullName
-        }
-    } | Where-Object {
-        ! (Test-Path -Path $_.Path) &&
-        ! (& lazbuild --verbose-pkgsearch $_.Name ) &&
-        ! (& lazbuild --add-package $_.Name)
-    } | ForEach-Object -Parallel {
-        Invoke-WebRequest -OutFile $_.OutFile -Uri $_.Uri
-        New-Item -Type Directory -Path $_.Path | Out-Null
-        Expand-Archive -Path $_.OutFile -DestinationPath $_.Path
-        Remove-Item $_.OutFile
-        (Get-ChildItem -Filter '*.lpk' -Recurse -File –Path $_.Path).FullName |
-            ForEach-Object {
-                & lazbuild --add-package-link $_ | Out-Null
-                "[$LastExitCode] add package link $_" | Out-Log
+    If ($VAR.Pkg.count -gt 0) {
+        'LOAD PACKAGES FROM OPM' | Out-Log
+        $VAR.Pkg | ForEach-Object {
+            @{
+                Name = $_
+                Uri = "https://packages.lazarus-ide.org/$($_).zip"
+                Path = "$($Env:APPDATA)\.lazarus\onlinepackagemanager\packages\$($_)"
+                OutFile = (New-TemporaryFile).FullName
             }
+        } | Where-Object {
+            ! (Test-Path -Path $_.Path) &&
+            ! (& lazbuild --verbose-pkgsearch $_.Name ) &&
+            ! (& lazbuild --add-package $_.Name)
+        } | ForEach-Object -Parallel {
+            Invoke-WebRequest -OutFile $_.OutFile -Uri $_.Uri
+            New-Item -Type Directory -Path $_.Path | Out-Null
+            Expand-Archive -Path $_.OutFile -DestinationPath $_.Path
+            Remove-Item $_.OutFile
+            (Get-ChildItem -Filter '*.lpk' -Recurse -File –Path $_.Path).FullName |
+                ForEach-Object {
+                    & lazbuild --add-package-link $_ | Out-Null
+                    "[$($LastExitCode)] add package link $($_)" | Out-Log
+                }
+        }
     }
     If (Test-Path -Path $VAR.lib) {
         'LOAD OTHER .LPK' | Out-Log
@@ -74,7 +75,7 @@ Function Build-Project {
                 $_ -notmatch '(cocoa|x11|_template)'
             } | ForEach-Object {
                 & lazbuild --add-package-link $_ | Out-Null
-               "[$LastExitCode] add package link $_" | Out-Log
+               "[$($LastExitCode)] add package link $($_)" | Out-Log
             }
     }
     Exit $(
@@ -95,7 +96,7 @@ Function Build-Project {
         (Get-ChildItem -Filter '*.lpi' -Recurse -File –Path $Var.app).FullName |
             ForEach-Object {
                 $Output = (& lazbuild --build-all --recursive --no-write-project $_)
-                $Result = @("[$LastExitCode] $_")
+                $Result = @("[$($LastExitCode)] $($_)")
                 $exitCode = If ($LastExitCode -eq 0) {
                     $Result += $Output | Where-Object { $_ -match 'Linking' }
                     0
