@@ -41,7 +41,7 @@ Function Build-Project {
         ! (Test-Path -Path $_.Path)
     } | ForEach-Object {
         $_.Url | Request-File | Install-Program
-        $Env:PATH+=";$_.Path"
+        $Env:PATH+=";$($_.Path)"
         Return (Get-Command $_.Cmd).Source
     } | Out-Host
     'LOAD PACKAGES FROM OPM' | Out-Log
