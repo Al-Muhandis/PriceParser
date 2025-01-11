@@ -92,7 +92,6 @@ Function Build-Project {
             If ($LastExitCode -eq 0) { 0 } Else { 1 }
         }
     ) + (
-        'BUILD APPLICATIONS' | Out-Log
         (Get-ChildItem -Filter '*.lpi' -Recurse -File –Path $Var.app).FullName |
             ForEach-Object {
                 $Output = (& lazbuild --build-all --recursive --no-write-project $_)
@@ -107,7 +106,6 @@ Function Build-Project {
                 $Result | Out-Log
                 Return $exitCode
             } | Measure-Object -Sum
-        )
     ).Sum
 }
 
