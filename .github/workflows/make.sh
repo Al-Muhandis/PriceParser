@@ -24,13 +24,12 @@ function priv_lazbuild
     done < <(jq --raw-output --exit-status 'keys.[]' <<< "${MAPFILE[@]}")
     declare -rA VAR
     if ! [[ -d "${VAR[app]}" ]]; then
-        printf '\x1b[32m\t%s\x1b[0m\n' "${VAR[app]} did not find!"
+        printf '\x1b[32m\t%s\x1b[0m\n' "Did not find ${VAR[app]}"
         exit 1
     fi >&2
     if [[ -f '.gitmodules' ]]; then
         git submodule update --init --recursive --force --remote &
     fi
-    printf '\x1b[33m%s\x1b[0m\n' 'INSTALL LAZBUILD'
     if ! (command -v lazbuild); then
         # shellcheck source=/dev/null
         source '/etc/os-release'
@@ -49,29 +48,29 @@ function priv_lazbuild
                 [dir]="${HOME}/.lazarus/onlinepackagemanager/packages/${REPLY}"
                 [out]=$(mktemp)
             )
-            if ! [[ -d "${TMP[dir]}" ]] &&
+            if ! [[ -d ${TMP[dir]} ]] &&
                ! (lazbuild --verbose-pkgsearch "${REPLY}") &&
                ! (lazbuild --add-package "${REPLY}"); then
                     wget --quiet --output-document "${TMP[out]}" "${TMP[url]}"
                     mkdir --parents "${TMP[dir]}"
                     unzip -o "${TMP[out]}" -d "${TMP[dir]}"
                     rm --verbose "${TMP[out]}"
-                    find "${TMP[dir]}" -type 'f' -name '*.lpk' -printf '\033[33m\tadd package link\t%p\033[0m\n' -exec \
+                    find "${TMP[dir]}" -type 'f' -name '*.lpk' -printf '\033[33m\tadded\t%p\033[0m\n' -exec \
                         lazbuild --add-package-link {} + >&2
             fi
         ) &
     done < <(jq --raw-output --exit-status '.pkg[]' <<< "${MAPFILE[@]}")
     wait
-    if [[ -d "${VAR[lib]}" ]]; then
+    if [[ -d ${VAR[lib]} ]]; then
         while read -r; do
             if ! [[ ${REPLY} =~ (cocoa|gdi|_template) ]]; then
                 lazbuild --add-package-link "${REPLY}"
-                printf '\x1b[32m\t%s\x1b[0m\n' "${REPLY} add package link"
+                printf '\x1b[32m\t%s\x1b[0m\n' "${REPLY} added"
             fi
         done < <(find "${VAR[lib]}" -type 'f' -name '*.lpk')
     fi >&2
     declare -i exitCode=0
-    if [[ -f "${VAR[tst]}" ]]; then
+    if [[ -f ${VAR[tst]} ]]; then
         read -r < <(
             lazbuild --build-all --recursive --no-write-project "${VAR[tst]}" |
                 awk '/Linking/{print $3}'
@@ -83,10 +82,10 @@ function priv_lazbuild
     while read -r; do
         mapfile -t < <(mktemp)
         if (lazbuild --build-all --recursive --no-write-project "${REPLY:?}" > "${MAPFILE[0]:?}"); then
-            printf '\x1b[32m\t%s\x1b[0m\n' "[${?}] ${REPLY:?}"
+            printf '\x1b[32m\t%s\x1b[0m\n' "[${?}] built ${REPLY:?}"
             grep --color='always' 'Linking' "${MAPFILE[0]:?}"
         else
-            printf '\x1b[31m\t%s\x1b[0m\n' "[${?}] ${REPLY:?}"
+            printf '\x1b[31m\t%s\x1b[0m\n' "[${?}] built ${REPLY:?}"
             grep --color='always' --extended-regexp '(Error|Fatal):' "${MAPFILE[0]:?}"
             ((exitCode+=1))
         fi >&2

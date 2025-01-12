@@ -20,7 +20,7 @@ Function Build-Project {
         Get-Content -Path $PSCommandPath.Replace('ps1', 'json') | ConvertFrom-Json
     )
     If (! (Test-Path -Path $Var.app)) {
-        'Did not find the ' + $Var.app | Out-Log
+        'Did not find ' + $Var.app | Out-Log
         Exit 1
     }
     If (Test-Path -Path '.gitmodules') {
@@ -110,7 +110,7 @@ Filter Out-Log {
         } Else {
             "$([char]27)[31m$(Get-Date -uformat '%y-%m-%d_%T')`t[{0}]`t{1}$([char]27)[0m" -f $LastExitCode, $_
         }
-    ) | Out-Host
+    ) | Out-String
 }
 
 Filter Request-File {
