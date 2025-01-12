@@ -95,7 +95,7 @@ Function Build-Project {
                     $Result += $Output | Where-Object { $_ -match '(Error|Fatal):' }
                     1
                 }
-                $Result | Out-Log
+                $Result | Out-String | Out-Log
                 Return $exitCode
             } | Measure-Object -Sum
     ).Sum
@@ -110,7 +110,7 @@ Filter Out-Log {
         } Else {
             "$([char]27)[31m$(Get-Date -uformat '%y-%m-%d_%T')`t[{0}]`t{1}$([char]27)[0m" -f $LastExitCode, $_
         }
-    ) | Out-String
+    ) | Out-Host
 }
 
 Filter Request-File {
