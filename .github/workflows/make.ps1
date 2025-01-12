@@ -25,7 +25,7 @@ Function Build-Project {
     }
     If (Test-Path -Path '.gitmodules') {
         & git submodule update --init --recursive --force --remote | Out-Host
-        "[$($LastExitCode)] git submodule update" | Out-Log
+        "git submodule update" | Out-Log
     }
     @(
         @{
@@ -57,11 +57,10 @@ Function Build-Project {
             New-Item -Type Directory -Path $_.Path | Out-Null
             Expand-Archive -Path $_.OutFile -DestinationPath $_.Path
             Remove-Item $_.OutFile
-            (Get-ChildItem -Filter '*.lpk' -Recurse -File –Path $_.Path).FullName |
-                ForEach-Object {
-                    & lazbuild --add-package-link $_ | Out-Null
-                    "[$($LastExitCode)] add package link $($_)" | Out-Log
-                }
+            Return (Get-ChildItem -Filter '*.lpk' -Recurse -File –Path $_.Path).FullName
+        } | ForEach-Object {
+            & lazbuild --add-package-link $_ | Out-Null
+            "add package link $($_)" | Out-Log
         }
     }
     If (Test-Path -Path $VAR.lib) {
@@ -70,7 +69,7 @@ Function Build-Project {
                 $_ -notmatch '(cocoa|x11|_template)'
             } | ForEach-Object {
                 & lazbuild --add-package-link $_ | Out-Null
-               "[$($LastExitCode)] add package link $($_)" | Out-Log
+               "add package link $($_)" | Out-Log
             }
     }
     Exit $(
@@ -90,7 +89,7 @@ Function Build-Project {
         (Get-ChildItem -Filter '*.lpi' -Recurse -File –Path $Var.app).FullName |
             ForEach-Object {
                 $Output = (& lazbuild --build-all --recursive --no-write-project $_)
-                $Result = @("[$($LastExitCode)] $($_)")
+                $Result = @($_)
                 $exitCode = If ($LastExitCode -eq 0) {
                     $Result += $Output | Where-Object { $_ -match 'Linking' }
                     0
@@ -109,9 +108,9 @@ Filter Out-Log {
         If (! (Test-Path -Path Variable:LastExitCode)) {
             "$([char]27)[33m$(Get-Date -uformat '%y-%m-%d_%T')`t{0}$([char]27)[0m" -f $_
         } ElseIf ($LastExitCode -eq 0) {
-            "$([char]27)[32m$(Get-Date -uformat '%y-%m-%d_%T')`t{0}$([char]27)[0m" -f $_
+            "$([char]27)[32m$(Get-Date -uformat '%y-%m-%d_%T')`t[{0}]`t{1}$([char]27)[0m" -f $LastExitCode, $_
         } Else {
-            "$([char]27)[31m$(Get-Date -uformat '%y-%m-%d_%T')`t{0}$([char]27)[0m" -f $_
+            "$([char]27)[31m$(Get-Date -uformat '%y-%m-%d_%T')`t[{0}]`t{1}$([char]27)[0m" -f $LastExitCode, $_
         }
     ) | Out-Host
 }
