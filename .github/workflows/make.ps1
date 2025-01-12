@@ -20,7 +20,7 @@ Function Build-Project {
         Get-Content -Path $PSCommandPath.Replace('ps1', 'json') | ConvertFrom-Json
     )
     If (! (Test-Path -Path $Var.app)) {
-        "$($Var.app) did not find!" | Out-Log
+        'Did not find the ' + $Var.app | Out-Log
         Exit 1
     }
     If (Test-Path -Path '.gitmodules') {
@@ -38,39 +38,37 @@ Function Build-Project {
     } | ForEach-Object {
         $_.Url | Request-File | Install-Program
         $Env:PATH+=';' + $_.Path
-        Return (Get-Command $_.Cmd).Source
+        Return 'installed ' + (Get-Command $_.Cmd).Source
     } | Out-Log
-    If ($VAR.Pkg.count -gt 0) {
-        $VAR.Pkg | ForEach-Object {
-            @{
-                Name = $_
-                Uri = "https://packages.lazarus-ide.org/$($_).zip"
-                Path = "$($Env:APPDATA)\.lazarus\onlinepackagemanager\packages\$($_)"
-                OutFile = (New-TemporaryFile).FullName
-            }
-        } | Where-Object {
-            ! (Test-Path -Path $_.Path) &&
-            ! (& lazbuild --verbose-pkgsearch $_.Name ) &&
-            ! (& lazbuild --add-package $_.Name)
-        } | ForEach-Object -Parallel {
-            Invoke-WebRequest -OutFile $_.OutFile -Uri $_.Uri
-            New-Item -Type Directory -Path $_.Path | Out-Null
-            Expand-Archive -Path $_.OutFile -DestinationPath $_.Path
-            Remove-Item $_.OutFile
-            Return (Get-ChildItem -Filter '*.lpk' -Recurse -File –Path $_.Path).FullName
-        } | ForEach-Object {
-            & lazbuild --add-package-link $_ | Out-Null
-            "add package link $($_)" | Out-Log
+    $VAR.Pkg | ForEach-Object {
+        @{
+            Name = $_
+            Uri = "https://packages.lazarus-ide.org/$($_).zip"
+            Path = "$($Env:APPDATA)\.lazarus\onlinepackagemanager\packages\$($_)"
+            OutFile = (New-TemporaryFile).FullName
         }
-    }
+    } | Where-Object {
+        ! (Test-Path -Path $_.Path) &&
+        ! (& lazbuild --verbose-pkgsearch $_.Name ) &&
+        ! (& lazbuild --add-package $_.Name)
+    } | ForEach-Object -Parallel {
+        Invoke-WebRequest -OutFile $_.OutFile -Uri $_.Uri
+        New-Item -Type Directory -Path $_.Path | Out-Null
+        Expand-Archive -Path $_.OutFile -DestinationPath $_.Path
+        Remove-Item $_.OutFile
+        Return (Get-ChildItem -Filter '*.lpk' -Recurse -File –Path $_.Path).FullName
+    } | ForEach-Object {
+        & lazbuild --add-package-link $_ | Out-Null
+        Return 'added ' + $_
+    } | Out-Log
     If (Test-Path -Path $VAR.lib) {
         (Get-ChildItem -Filter '*.lpk' -Recurse -File –Path $VAR.lib).FullName |
             Where-Object {
                 $_ -notmatch '(cocoa|x11|_template)'
             } | ForEach-Object {
                 & lazbuild --add-package-link $_ | Out-Null
-               "add package link $($_)" | Out-Log
-            }
+                Return 'added ' + $_
+            } | Out-Log
     }
     Exit $(
         If (Test-Path -Path $Var.tst) {
@@ -89,7 +87,7 @@ Function Build-Project {
         (Get-ChildItem -Filter '*.lpi' -Recurse -File –Path $Var.app).FullName |
             ForEach-Object {
                 $Output = (& lazbuild --build-all --recursive --no-write-project $_)
-                $Result = @($_)
+                $Result = @('built ' + $_)
                 $exitCode = If ($LastExitCode -eq 0) {
                     $Result += $Output | Where-Object { $_ -match 'Linking' }
                     0

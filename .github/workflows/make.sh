@@ -17,19 +17,16 @@ EOF
 
 function priv_lazbuild
 (
-    printf '\x1b[33m%s\x1b[0m\n' 'LOAD MAKE.JSON'
     mapfile -t <"${0//sh/json}"
     declare -A VAR
     while read -r; do
         VAR[${REPLY}]=$(jq --raw-output --exit-status ".${REPLY}" <<< "${MAPFILE[@]}")
     done < <(jq --raw-output --exit-status 'keys.[]' <<< "${MAPFILE[@]}")
     declare -rA VAR
-    printf '\x1b[33m%s\x1b[0m\n' 'CHECK PATH WITH .LPI'
     if ! [[ -d "${VAR[app]}" ]]; then
         printf '\x1b[32m\t%s\x1b[0m\n' "${VAR[app]} did not find!"
         exit 1
     fi >&2
-    printf '\x1b[33m%s\x1b[0m\n' 'UPDATE GIT SUBMODULE'
     if [[ -f '.gitmodules' ]]; then
         git submodule update --init --recursive --force --remote &
     fi
@@ -45,7 +42,6 @@ function priv_lazbuild
         esac
     fi &>/dev/null
     wait
-    printf '\x1b[33m%s\x1b[0m\n' 'LOAD PACKAGES FROM OPM'
     while read -r; do
         (
             declare -rA TMP=(
@@ -67,7 +63,6 @@ function priv_lazbuild
     done < <(jq --raw-output --exit-status '.pkg[]' <<< "${MAPFILE[@]}")
     wait
     if [[ -d "${VAR[lib]}" ]]; then
-        printf '\x1b[33m%s\x1b[0m\n' 'LOAD OTHER .LPK'
         while read -r; do
             if ! [[ ${REPLY} =~ (cocoa|gdi|_template) ]]; then
                 lazbuild --add-package-link "${REPLY}"
@@ -77,7 +72,6 @@ function priv_lazbuild
     fi >&2
     declare -i exitCode=0
     if [[ -f "${VAR[tst]}" ]]; then
-        printf '\x1b[33m%s\x1b[0m\n' 'RUN UNITTEST'
         read -r < <(
             lazbuild --build-all --recursive --no-write-project "${VAR[tst]}" |
                 awk '/Linking/{print $3}'
@@ -86,7 +80,6 @@ function priv_lazbuild
             ((exitCode+=1))
         fi
     fi
-    printf '\x1b[33m%s\x1b[0m\n' 'BUILD APPLICATIONS'
     while read -r; do
         mapfile -t < <(mktemp)
         if (lazbuild --build-all --recursive --no-write-project "${REPLY:?}" > "${MAPFILE[0]:?}"); then
