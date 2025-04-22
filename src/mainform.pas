@@ -109,6 +109,7 @@ begin
   FArticles.CaseSensitive:=False;
   FArticles.Sorted:=True;
   FArticles.Duplicates:=dupError;
+  aFile:=TStringList.Create;
   try
     FRow:=0;
     // aNodeTmp:=aDoc.FirstChild('office:document');
@@ -119,7 +120,6 @@ begin
       Exit;
     while ParseFromOneTable(aNode) do
       aNode:=aNode.NextSibling;
-    aFile:=TStringList.Create;
     aFile.Text:=FOutJSON.FormatJSON();
     aFile.SaveToFile('pricelist.json');
   finally
@@ -136,8 +136,8 @@ var
   aArticle, aName: String;
   aPV: Integer;
   aBV, aPPrice, aCPrice: Currency;
-  aNodeCell, aNodeRow, aChildTable: TDOMNode;
-  aParsed: Boolean;
+  aNodeCell, aNodeRow, aChildTable, aSubNodeCell: TDOMNode;
+  aParsed, aRepeatRowInOne, aExit: Boolean;
 
   function CheckNodeCell(aNode: TDOMNode): TDOMNode;
   begin
@@ -147,6 +147,20 @@ var
       FEventLog.Debug('Jump to next cell in the row. "%s"', [aName]);
       Result:=Result.NextSibling;
     end;
+  end;
+
+  function CheckNodeMiddleCell: Boolean;
+  begin
+    if Assigned(aNodeCell) then
+    begin
+      if SameStr(aNodeCell.NodeName, 'table:covered-table-cell') then
+        Exit(True)
+      else
+        if SameStr(aNodeCell.NodeName, 'table:table-cell') and
+          (aNodeCell.Attributes.GetNamedItem('table:number-rows-spanned').TextContent='5') then
+        Exit(True);
+    end;
+    Result:=False;
   end;
 
 begin
@@ -170,45 +184,81 @@ begin
   aNodeRow:=aTableNode.FirstChild;
   while Assigned(aNodeRow) do
   begin
+    if SameStr(aNodeRow.NodeName, 'table:table-columns') then
+      aNodeRow:=aNodeRow.NextSibling;
     while not aNodeRow.HasChildNodes do
       aNodeRow:=aNodeRow.NextSibling;
     aNodeCell:=aNodeRow.FirstChild;
-    aArticle:=ParseText(aNodeCell.TextContent);
-    if not aArticle.IsEmpty then
-    begin
-      aNodeCell:=aNodeCell.NextSibling;
-      aName:=ParseText(aNodeCell.TextContent);
-      if aName.IsEmpty then
-        Exit(True);
-      aNodeCell:=aNodeCell.NextSibling;
-      aPV:=ParseInteger(aNodeCell.TextContent, aParsed);
-      aNodeCell:=aNodeCell.NextSibling;
-      aBV:=ParseCurrency(aNodeCell.TextContent, aParsed);
-      if aParsed then
+    aExit:=True;
+    repeat
+      aSubNodeCell:=aNodeCell.FirstChild;
+      if SameStr(aSubNodeCell.NodeName, 'text:p') then
+      begin
+        aSubNodeCell:=aSubNodeCell.NextSibling;
+        if Assigned(aSubNodeCell) and SameStr(aSubNodeCell.NodeName, 'table:table') then
+        begin
+          aExit:=False;
+          while ParseFromOneTable(aSubNodeCell) do
+            aSubNodeCell:=aSubNodeCell.NextSibling;
+          aNodeCell:=aNodeCell.NextSibling;
+        end;
+      end;
+    until not Assigned(aNodeCell) or aExit;
+    if not Assigned(aNodeCell) then
+      Exit(True);
+    repeat
+      aRepeatRowInOne:=False;
+      aArticle:=ParseText(aNodeCell.TextContent);
+      if aArticle='80905-140' then
+        begin
+          aArticle:=aArticle;
+        end;
+      if not aArticle.IsEmpty and (aArticle.Length<50) then
       begin
         aNodeCell:=aNodeCell.NextSibling;
-        aNodeCell:=aNodeCell.NextSibling;
-        if not Assigned(aNodeCell) then
+        aName:=ParseText(aNodeCell.TextContent);
+        if aName.IsEmpty then
           Exit(True);
-        aPPrice:=ParseCurrency(aNodeCell.TextContent, aParsed);
-        if not aParsed then
-          raise Exception.Create('Parse error');
         aNodeCell:=aNodeCell.NextSibling;
-        if Assigned(aNodeCell) then
+        aPV:=ParseInteger(aNodeCell.TextContent, aParsed);
+        aNodeCell:=aNodeCell.NextSibling;
+        aBV:=ParseCurrency(aNodeCell.TextContent, aParsed);
+        if aParsed then
         begin
-          aNodeCell:=CheckNodeCell(aNodeCell);
           aNodeCell:=aNodeCell.NextSibling;
-          aNodeCell:=CheckNodeCell(aNodeCell);
-          aCPrice:=ParseCurrency(aNodeCell.TextContent, aParsed);
+          aNodeCell:=aNodeCell.NextSibling;
+          if not Assigned(aNodeCell) then
+            Exit(True);
+          aPPrice:=ParseCurrency(aNodeCell.TextContent, aParsed);
           if not aParsed then
-            raise Exception.CreateFmt('Parse error. ACPrice: %s', [aNodeCell.TextContent]);
-          AppendPriceItem(FOutJSON, aArticle, aName, aPV, aPPrice, aCPrice, aBV);
-        end
-        else
-          FEventLog.Error('Parse Error: %s %s; PV: %d, Partner.: %s, BD: %s',
-            [aArticle, aName, aPV, CurrToStr(aPPrice), CurrToStr(aBV)]);
+            raise Exception.Create('Parse error');
+          aNodeCell:=aNodeCell.NextSibling;
+          if Assigned(aNodeCell) then
+          begin
+            aNodeCell:=CheckNodeCell(aNodeCell);
+            aNodeCell:=aNodeCell.NextSibling;
+            aNodeCell:=CheckNodeCell(aNodeCell);
+            aCPrice:=ParseCurrency(aNodeCell.TextContent, aParsed);
+            if not aParsed then
+              raise Exception.CreateFmt('Parse error. ACPrice: %s', [aNodeCell.TextContent]);
+            AppendPriceItem(FOutJSON, aArticle, aName, aPV, aPPrice, aCPrice, aBV);
+            aNodeCell:=aNodeCell.NextSibling;
+            while CheckNodeMiddleCell do
+            begin
+              aNodeCell:=aNodeCell.NextSibling;
+              if Assigned(aNodeCell) and SameStr(aNodeCell.NodeName, 'table:table-cell') then
+              begin
+                aRepeatRowInOne:=True;
+                break;
+              end;
+            end;
+          end
+          else
+            FEventLog.Error('Parse Error: %s %s; PV: %d, Partner.: %s, BD: %s',
+              [aArticle, aName, aPV, CurrToStr(aPPrice), CurrToStr(aBV)]);
+        end;
       end;
-    end;
+    until not aRepeatRowInOne;
     aNodeRow:=aNodeRow.NextSibling;
   end;
   Result:=True;
